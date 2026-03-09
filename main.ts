@@ -3,10 +3,6 @@ import { StdioServerTransport } from "@modelcontextprotocol/sdk/server/stdio.js"
 import { z} from 'zod'
 
 
-const NWS_API_BASE = 'https://api.weather.gov';
-const USER_AGENT = 'weather-app/1.0';
-
-
 // 1. crear el servidor
 const server = new McpServer({
     name: 'Demo',
@@ -27,10 +23,31 @@ server.registerTool(
         },
     },
     async ({ city }) => {
+        const response = await fetch(`https://geocoding-api.open-meteo.com/v1/search?name=${city}&count=10&language=en&format=json`)
+        const data = await response.json()
+        if (data.length === 0 ){
+            return {
+                content: [{
+                    type: 'text',
+                    text: `El clima de ${city} No se ha encontrado`,
+                }],
+            };
+        }
+        
+        const { latitude, longitude} = data.results[0]
+        console.log(latitude);
+        console.log(longitude);
+
+        const weatherResponse = await fetch(`https://api.open-meteo.com/v1/forecast?latitude=${latitude}&longitude=${longitude}&hourly=temperature_2m&current=temperature_2m,is_day,precipitation,rain,pressure_msl`)
+        const weatherData = await weatherResponse.json();
+        console.log(weatherData);
+
+
+
         return {
             content: [{
                 type: 'text',
-                text: `El clima de ${city} es soleado`,
+                text: JSON.stringify(weatherData, null, 2)
             }],
         };
     }
